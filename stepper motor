@@ -1,0 +1,82 @@
+#include <LPC17xx.H>
+#include "GLCD.H"
+#define __FI 1 /* Font index 16x24 */
+static unsigned char Dir=0x00;
+void delay(unsigned int x);
+void Direction(void);
+/*----------------------------------------------------------------------------
+Function that initializes Button INT0 to generate an interrupt
+*----------------------------------------------------------------------------*/
+void BUTTON_Init(void) {
+LPC_GPIO2->FIODIR &= ~(1 << 10); /* PORT2.10 defined as input
+*/
+LPC_GPIOINT->IO2IntEnF |= (1 << 10); /* enable falling edge irq */
+NVIC_EnableIRQ(EINT3_IRQn);
+}
+/*----------------------------------------------------------------------------
+External IRQ Handler
+*----------------------------------------------------------------------------*/
+void EINT3_IRQHandler()
+{
+LPC_GPIOINT->IO2IntClr |= (1 << 10); /* clear pending interrupt */
+Direction();
+}
+main()
+{
+LPC_SC->PCONP |= (1 << 15); /* enable power to GPIO & IOCON
+*/
+LPC_GPIO0->FIODIR |= 0x00078000; /* Configure P0.15,P0.16,P0.17,P0.18 as Outputs*/
+LPC_GPIO2->FIODIR &= ~(1<<10); /* Configure P2.10 as Input */
+BUTTON_Init();
+#ifdef __USE_LCD
+GLCD_Init(); /* Initialize graphical LCD */
+GLCD_Clear(White); /* Clear graphical LCD display */
+GLCD_SetBackColor(Blue);
+GLCD_SetTextColor(White);
+GLCD_DisplayString(0, 0, __FI, " ECE ");
+GLCD_DisplayString(1, 0, __FI, " KRCE ");
+GLCD_DisplayString(2, 0, __FI, " EMBEDDED LAB ");
+GLCD_SetBackColor(White);
+GLCD_SetTextColor(Blue);
+GLCD_DisplayString(5, 0, __FI, " Stepper Motor ");
+GLCD_DisplayString(6, 0, __FI, " AntiClockwise ");
+#endif
+while(1)
+{
+if(Dir) /* Clockwise Direction */
+{
+LPC_GPIO0->FIOPIN = (LPC_GPIO0->FIOPIN & 0xFFF87FFF) | 0x00088000;
+delay(50000);
+LPC_GPIO0->FIOPIN = (LPC_GPIO0->FIOPIN & 0xFFF87FFF) | 0x00044000;
+delay(50000);
+LPC_GPIO0->FIOPIN = (LPC_GPIO0->FIOPIN & 0xFFF87FFF) | 0x00022000;
+delay(50000);
+LPC_GPIO0->FIOPIN = (LPC_GPIO0->FIOPIN & 0xFFF87FFF) | 0x00011000;
+delay(50000);
+}
+Else /* AntiClockwise Direction */
+{
+LPC_GPIO0->FIOPIN = (LPC_GPIO0->FIOPIN & 0xFFF87FFF) | 0x00011000;
+delay(50000);
+LPC_GPIO0->FIOPIN = (LPC_GPIO0->FIOPIN & 0xFFF87FFF) | 0x00022000;
+delay(50000);
+LPC_GPIO0->FIOPIN = (LPC_GPIO0->FIOPIN & 0xFFF87FFF) | 0x00044000;
+delay(50000);
+LPC_GPIO0->FIOPIN = (LPC_GPIO0->FIOPIN & 0xFFF87FFF) | 0x00088000;
+delay(50000);
+}
+}
+}
+void delay(unsigned int x) /* Delay Routine */
+{
+for(;x>0;x--);
+}
+void Direction(void)
+{
+Dir = ~Dir; /* Complement the Direction */
+if(Dir)
+GLCD_DisplayString(6, 0, __FI, " Clockwise ");
+else
+GLCD_DisplayString(6, 0, __FI, " AntiClockwise ");/* Display "Anti Clockwise" on LCD */
+delay(50000);
+}
