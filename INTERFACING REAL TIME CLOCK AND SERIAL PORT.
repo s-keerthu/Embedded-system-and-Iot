@@ -1,0 +1,347 @@
+SET RTC
+#include <LPC17xx.H>
+#include "GLCD.h"
+#include "Serial.h"
+#define __FI 1
+void Set_RTC(void);
+void delay(unsigned int x);
+unsigned char rtc_val[15] =
+{0x0,0x0,0x0,0x0,0x0,0x2,0x6,0x7,0x1,0x9,0x0,0x1,0x6};
+unsigned char week[15][15] =
+{"SUN","MON","TUE","WED","THU","FRI","SAT"};
+void delay(unsigned int x)
+{
+unsigned int i;
+for(i=0x00;i<=x;i++);
+}
+void Set_RTC(void)
+{
+unsigned int j=0,count=0,k;
+LPC_GPIO0->FIOPIN = (LPC_GPIO0->FIOPIN & 0x807FFFFF) | (1 << 27);
+delay(0x28);
+while(count != 0x0D)
+{
+LPC_GPIO1->FIOPIN = ((LPC_GPIO1->FIOPIN & 0xF807FFFF) |
+(count << 19));
+
+for(k = 0; k <= 1000; k ++);
+
+LPC_GPIO0->FIOPIN = ((LPC_GPIO0->FIOPIN & 0xFF807FFF) | (rtc_val[j]
+<< 15));
+
+for(k = 0; k <= 1000; k ++);
+
+LPC_GPIO0->FIOPIN = ((LPC_GPIO0->FIOPIN & 0x807FFFFF) | (1 << 27) |
+(1 << 29));
+
+for(k = 0; k <= 1000; k ++);
+LPC_GPIO0->FIOPIN = (LPC_GPIO0->FIOPIN & 0x807FFFFF) |
+
+(1 << 27);
+count++;
+j++;
+}
+LPC_GPIO0->FIOPIN = (LPC_GPIO0->FIOPIN & 0x807FFFFF);
+}
+int main()
+{
+unsigned char i,c;
+LPC_GPIO0->FIODIR |= 0x7FFF8000;
+LPC_GPIO1->FIODIR |= 0x07F80000;
+
+69
+
+#ifdef __USE_LCD
+GLCD_Init();
+GLCD_Clear(White);
+GLCD_SetBackColor(Blue);
+GLCD_SetTextColor(White);
+GLCD_DisplayString(0, 0, __FI, " EEC ");
+GLCD_DisplayString(1, 0, __FI, " KRCE ");
+GLCD_DisplayString(2, 0, __FI, " EMBEDDED LAB ");
+GLCD_SetBackColor(White);
+GLCD_SetTextColor(Blue);
+GLCD_DisplayString(5, 0, __FI, " REAL TIME CLOCK ");
+#endif
+SER_Init();
+while(1)
+{
+Set_RTC();
+}
+}
+read rtc
+#include <LPC17xx.H>
+#include "GLCD.h"
+#include "Serial.h"
+#define __FI 1
+void Read_RTC(void);
+void Backspace(void);
+void space(void);
+void delete(void);
+void Disp_Month(void);
+unsigned char Units_Tens(unsigned int);
+void delay(unsigned int x);
+unsigned char rtc_val[15];
+unsigned char
+week[15][15]={"SUN","MON","TUE","WED","THU","FRI","SAT"};
+void delay(unsigned int x)
+{
+unsigned int i;
+for(i=0x00;i<=x;i++);
+}
+void Backspace()
+{
+SER_PutChar(0x08);
+}
+void space(void)
+{
+unsigned char i;
+for(i=0x00; i<0x03; i++)
+SER_PutChar(0x20);
+}
+unsigned char Units_Tens(unsigned int i)
+{
+unsigned char temp = 0,temp1 = 0;
+temp = rtc_val[i] & 0x0F;
+i++;
+temp1 = rtc_val[i] & 0x0F;
+temp1 <<= 4;
+temp1 |= temp;
+return temp1;
+}
+void display()
+{
+unsigned int j = 0,temp = 0,temp1 = 0;
+unsigned long t;
+unsigned char c;
+j = 0x04;
+c = Units_Tens(j);
+c &= 0x3F;
+temp1 = c;
+SER_SendString("\n\r");
+t =((c & 0xf0) >> 4);
+if( t <= 9)
+t = t + 0x30;
+else
+t = t + 0x37;
+GLCD_DisplayChar(5,0, __FI,t);
+SER_SendHex((c & 0xf0) >> 4);
+SER_SendHex(temp1 & 0x0f);
+t =(temp1 & 0x0f);
+if( t <= 9)
+t = t + 0x30;
+else
+t = t + 0x37;
+GLCD_DisplayChar(5,1, __FI,t);
+GLCD_DisplayChar(5,2, __FI,' ');
+space();
+j = 0x02;
+c = Units_Tens(j);
+temp1 = c;
+SER_SendHex((c & 0xf0) >> 4);
+SER_SendHex(temp1 & 0x0f);
+t =((c & 0xf0) >> 4);
+if( t <= 9)
+t = t + 0x30;
+else
+t = t + 0x37;
+GLCD_DisplayChar(5,4, __FI,t);
+
+t =(temp1 & 0x0f);
+
+if( t <= 9)
+t = t + 0x30;
+else
+t = t + 0x37;
+GLCD_DisplayChar(5,5, __FI,t);
+GLCD_DisplayChar(5,6, __FI,' ');
+space();
+j = 0x00;
+c = Units_Tens(j);
+temp1 = c;
+SER_SendHex((c & 0xF0) >> 4);
+SER_SendHex(temp1 0x0F);
+space();
+
+t =((c & 0xf0) >> 4);
+if( t <= 9)
+t = t + 0x30;
+else
+t = t + 0x37;
+GLCD_DisplayChar(5,7, __FI,t);
+
+t =(temp1 & 0x0f);
+
+if( t <= 9)
+  t = t + 0x30;
+else
+t = t + 0x37;
+GLCD_DisplayChar(5,8, __FI,t);
+GLCD_DisplayChar(5,9, __FI,' ');
+
+j = 0x5;
+c = (rtc_val[j] & 0x08);
+if(c != 0x00)
+{
+SER_PutChar('-');
+SER_PutChar('-');
+SER_PutChar('-');
+space();
+
+GLCD_DisplayString(7,0, __FI,"--- ");
+
+Disp_Month();
+}
+else
+{
+temp = (rtc_val[j] & 0x04);
+if(temp != 0x00)
+{
+GLCD_DisplayString(7,0, __FI," PM ");
+SER_SendString("PM");
+space();
+Disp_Month();
+}
+else
+{
+SER_SendString("AM");
+space();
+GLCD_DisplayString(7,0, __FI," AM ");
+Disp_Month();
+}
+}
+}
+void Read_RTC(void)
+{
+unsigned int j = 0,index = 0;
+unsigned long data;
+LPC_GPIO0->FIOPIN = (LPC_GPIO0->FIOPIN & 0x807FFFFF) | (1 << 27);
+delay(0x28);
+LPC_GPIO0->FIOPIN = (LPC_GPIO0->FIOPIN & 0xFF7FFFFF) | (3 << 27);
+
+while(j != 0xD)
+{
+index = (j & 0x0F);
+LPC_GPIO1->FIOPIN = ( LPC_GPIO1->FIOPIN & 0xF807FFFF) | ( index
+<< 19);
+delay(500);
+data = ((LPC_GPIO0->FIOPIN & 0x007F8000) >> 15);
+data = (unsigned char)data;
+rtc_val[j] = (data & 0x0F);
+j++;
+}
+LPC_GPIO0->FIOPIN = ( LPC_GPIO0->FIOPIN & 0x807FFFFF);
+}
+void delete()
+  {
+unsigned int i = 0;
+for(i=0; i<=0x22; i++)
+Backspace();
+}
+void Disp_Month(void)
+{
+unsigned int j = 0;
+unsigned char c = 0,temp = 0;
+unsigned long t;
+j = 0x6;
+c = rtc_val[j];
+j = c;
+GLCD_DisplayString(7,5, __FI,week[j]);
+GLCD_DisplayString(7,8, __FI," ");
+SER_SendString(week[j]);
+SER_PutChar(0x20);
+SER_PutChar(0x20);
+j = 0x7;
+c = Units_Tens(j);
+temp = c;
+SER_SendHex((c & 0xf0) >> 4);
+SER_SendHex(temp & 0x0f);
+SER_PutChar('-');
+
+t =((c & 0xf0) >> 4);
+if( t <= 9)
+t = t + 0x30;
+else
+t = t + 0x37;
+GLCD_DisplayChar(7,10, __FI,t);
+
+t =(temp & 0x0f);
+
+if( t <= 9)
+t = t + 0x30;
+else
+t = t + 0x37;
+GLCD_DisplayChar(7,11, __FI,t);
+GLCD_DisplayChar(7,12, __FI,'-');
+j = 0x09;
+c = Units_Tens(j);
+temp = c;
+SER_SendHex((c & 0xf0) >> 4);
+SER_SendHex(temp & 0x0f);
+SER_PutChar('-');
+
+t =((c & 0xf0) >> 4);
+if( t <= 9)
+t = t + 0x30;
+else
+t = t + 0x37;
+GLCD_DisplayChar(7,13, __FI,t);
+
+t =(temp & 0x0f);
+
+if( t <= 9)
+t = t + 0x30;
+else
+t = t + 0x37;
+GLCD_DisplayChar(7,14, __FI,t);
+GLCD_DisplayChar(7,15, __FI,'-');
+j = 0xb;
+c = Units_Tens(j);
+temp = c;
+SER_SendHex((c & 0xf0) >> 4);
+SER_SendHex(temp & 0x0f);
+
+t =((c & 0xf0) >> 4);
+
+if( t <= 9)
+t = t + 0x30;
+else
+t = t + 0x37;
+GLCD_DisplayChar(7,16, __FI,t);
+
+t =(temp & 0x0f);
+
+if( t <= 9)
+t = t + 0x30;
+else
+t = t + 0x37;
+GLCD_DisplayChar(7,17, __FI,t);
+delete();
+}
+int main()
+{
+LPC_SC->PCONP |= (1 << 15);
+LPC_GPIO0->FIODIR |= 0x7F800000;
+LPC_GPIO1->FIODIR |= 0x07F80000;
+#ifdef __USE_LCD
+GLCD_Init();
+GLCD_Clear(White);
+GLCD_SetBackColor(Blue);
+GLCD_SetTextColor(White);
+GLCD_DisplayString(0, 0, __FI, " ECE ");
+GLCD_DisplayString(1, 0, __FI, " KRCE ");
+GLCD_DisplayString(2, 0, __FI, " EMBEDDED LAB ");
+GLCD_SetBackColor(White);
+GLCD_SetTextColor(Blue);
+GLCD_DisplayString(3, 0, __FI, " REAL TIME CLOCK ");
+GLCD_DisplayString(4,0,__FI,"HRS MIN SEC ");
+GLCD_DisplayString(6,0,__FI," A/P DAY DD-MM-YY ");
+#endif
+while(1)
+  {
+Read_RTC();
+Read_RTC();
+display ();
+Read_RTC();
+}
+}
